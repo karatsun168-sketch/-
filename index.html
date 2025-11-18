@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研究室診断システム</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        input:focus, select:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+        }
+        .result-item {
+            margin: 15px 0;
+            padding: 10px;
+            border-left: 4px solid #3498db;
+            background-color: white;
+        }
+        .probability-100 { border-left-color: #27ae60; }
+        .probability-75 { border-left-color: #2ecc71; }
+        .probability-50 { border-left-color: #f39c12; }
+        .probability-25 { border-left-color: #e67e22; }
+        .probability-low { border-left-color: #e74c3c; }
+        .admin-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            opacity: 0.1;
+            transition: opacity 0.3s;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .admin-panel:hover {
+            opacity: 1;
+        }
+        .admin-btn {
+            background-color: #95a5a6;
+            font-size: 12px;
+            padding: 5px 10px;
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 研究室診断システム</h1>
+        
+        <div class="form-group">
+            <label for="gpa">あなたのGPA</label>
+            <input type="number" id="gpa" step="0.1" min="0" max="4.0" placeholder="0.0 ~ 4.0">
+        </div>
+
+        <div class="form-group">
+            <label for="firstChoice">第一希望研究室</label>
+            <select id="firstChoice">
+                <option value="">選択してください</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="secondChoice">第二希望研究室</label>
+            <select id="secondChoice">
+                <option value="">選択してください</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="thirdChoice">第三希望研究室</label>
+            <select id="thirdChoice">
+                <option value="">選択してください</option>
+            </select>
+        </div>
+
+        <button onclick="calculateProbability()">診断する</button>
+
+        <div id="result" class="result" style="display: none;">
+            <h2>🎯 診断結果</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <!-- 管理者パネル（通常は半透明で表示） -->
+    <div class="admin-panel">
+        <strong>管理者用</strong>
+        <button class="admin-btn" onclick="showAllLogs()">全ログ表示</button>
+        <button class="admin-btn" onclick="showStats()">統計表示</button>
+        <button class="admin-btn" onclick="downloadLogs()">ログダウンロード</button>
+        <button class="admin-btn" onclick="clearLogs()">ログ消去</button>
+    </div>
+
+    <script>
+        // 研究室データ
+        const labData = [
+            { name: "水族生理学研究室（品川)", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "水族生理学研究室（館山)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "水族生理学研究室（大泉)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "水族病理学研究室", capacity: 8, applicants: 13, gpa100: 3.0, gpa75: 3.5, gpa50: 3.5, gpa25: 3.5 },
+            { name: "水族栄養学研究室", capacity: 6, applicants: 6, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "水族養殖学研究室", capacity: 8, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "応用藻類学研究室", capacity: 6, applicants: 9, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "集団生物学研究室", capacity: 7, applicants: 10, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "増殖生態学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "資源解析学研究室", capacity: 6, applicants: 4, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "魚群制御学研究室", capacity: 5, applicants: 2, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "生産システム学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "ゲノム科学研究室", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "先端魚類防疫学研究室", capacity: 4, applicants: 0, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
+            { name: "応用微生物研究室", capacity: 5, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 }
+        ];
+
+        // 研究室選択肢を追加
+        function populateLabOptions() {
+            const selects = ['firstChoice', 'secondChoice', 'thirdChoice'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                labData.forEach(lab => {
+                    const option = document.createElement('option');
+                    option.value = lab.name;
+                    option.textContent = lab.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // 合格確率を計算
+        function calculateProbability() {
+            const gpa = parseFloat(document.getElementById('gpa').value);
+            const firstChoice = document.getElementById('firstChoice').value;
+            const secondChoice = document.getElementById('secondChoice').value;
+            const thirdChoice = document.getElementById('thirdChoice').value;
+
+            if (!gpa || gpa < 0 || gpa > 4.0) {
+                alert('有効なGPAを入力してください（0.0〜4.0）');
+                return;
+            }
+
+            let resultHTML = '';
+            const results = [];
+
+            // 各希望の確率を計算
+            [firstChoice, secondChoice, thirdChoice].forEach((choice, index) => {
+                if (!choice) return;
+
+                const lab = labData.find(l => l.name === choice);
+                if (!lab) return;
+
+                const probability = calculateLabProbability(gpa, lab);
+                const advice = getAdvice(probability);
+                const className = getProbabilityClass(probability);
+                
+                results.push(probability);
+
+                resultHTML += `
+                    <div class="result-item ${className}">
+                        <strong>第${index + 1}希望: ${lab.name}</strong><br>
+                        <span style="font-size: 1.2em; font-weight: bold;">${probability}</span><br>
+                        ${advice}
+                    </div>
+                `;
+            });
+
+            if (!resultHTML) {
+                resultHTML = '<p>研究室を選択してください。</p>';
+            }
+
+            document.getElementById('resultContent').innerHTML = resultHTML;
+            document.getElementById('result').style.display = 'block';
+            
+            // 使用データを自動記録
+            logUsageData(gpa, firstChoice, secondChoice, thirdChoice, results);
+        }
+
+        // 研究室ごとの確率計算
+        function calculateLabProbability(gpa, lab) {
+            // 募集余地がある場合
+            if (lab.applicants <= lab.capacity) {
+                return "100%";
+            }
+
+            // GPAに基づく確率計算
+            if (gpa >= lab.gpa100) return "100%";
+            if (gpa >= lab.gpa75) return "75%";
+            if (gpa >= lab.gpa50) return "50%";
+            if (gpa >= lab.gpa25) return "25%";
+            return "10%以下";
+        }
+
+        // アドバイスを取得
+        function getAdvice(probability) {
+            switch(probability) {
+                case "100%": return "🎉 確実に合格圏内です！";
+                case "75%": return "✅ 高い確率で合格できます";
+                case "50%": return "⚠️ 五分五分の勝負です";
+                case "25%": return "❗ やや厳しい状況です";
+                case "10%以下": return "💡 他の研究室も検討しましょう";
+                default: return "";
+            }
+        }
+
+        // 確率に応じたクラスを取得
+        function getProbabilityClass(probability) {
+            switch(probability) {
+                case "100%": return "probability-100";
+                case "75%": return "probability-75";
+                case "50%": return "probability-50";
+                case "25%": return "probability-25";
+                case "10%以下": return "probability-low";
+                default: return "";
+            }
+        }
+
+        // データ記録機能
+        function logUsageData(gpa, firstChoice, secondChoice, thirdChoice, results) {
+            const logData = {
+                timestamp: new Date().toLocaleString('ja-JP'),
+                gpa: gpa,
+                firstChoice: firstChoice,
+                secondChoice: secondChoice,
+                thirdChoice: thirdChoice,
+                result1: results[0] || '未選択',
+                result2: results[1] || '未選択',
+                result3: results[2] || '未選択'
+            };
+
+            // コンソールに表示（管理者確認用）
+            console.group('🔍 研究室診断利用データ');
+            console.table(logData);
+            console.groupEnd();
+
+            // ローカルストレージに保存
+            saveToLocalStorage(logData);
+        }
+
+        // ローカルストレージに保存
+        function saveToLocalStorage(data) {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            logs.push(data);
+            if (logs.length > 1000) logs.shift(); // 最大1000件
+            localStorage.setItem('lab_diagnosis_logs', JSON.stringify(logs));
+        }
+
+        // 管理者機能 - 全ログ表示
+        function showAllLogs() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            console.group('📊 全診断履歴');
+            if (logs.length === 0) {
+                console.log('ログはありません');
+            } else {
+                logs.forEach((log, index) => {
+                    console.group(`診断 ${index + 1} (${log.timestamp})`);
+                    console.table(log);
+                    console.groupEnd();
+                });
+            }
+            console.groupEnd();
+            alert(`全${logs.length}件のログをコンソールに表示しました（F12で確認）`);
+        }
+
+        // 管理者機能 - 統計表示
+        function showStats() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            console.group('📈 利用統計');
+            
+            console.log(`総診断回数: ${logs.length}回`);
+            
+            // 人気研究室ランキング
+            const labCount = {};
+            logs.forEach(log => {
+                if (log.firstChoice) labCount[log.firstChoice] = (labCount[log.firstChoice] || 0) + 1;
+                if (log.secondChoice) labCount[log.secondChoice] = (labCount[log.secondChoice] || 0) + 1;
+                if (log.thirdChoice) labCount[log.thirdChoice] = (labCount[log.thirdChoice] || 0) + 1;
+            });
+            
+            const sortedLabs = Object.entries(labCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            console.log('人気研究室TOP5:');
+            sortedLabs.forEach(([lab, count], index) => {
+                console.log(`  ${index + 1}. ${lab}: ${count}回`);
+            });
+            
+            // 平均GPA
+            const validGpas = logs.filter(log => log.gpa).map(log => log.gpa);
+            const avgGpa = validGpas.length > 0 ? 
+                (validGpas.reduce((a, b) => a + b, 0) / validGpas.length).toFixed(2) : 0;
+            console.log(`平均GPA: ${avgGpa}`);
+            
+            console.groupEnd();
+            alert('統計情報をコンソールに表示しました（F12で確認）');
+        }
+
+        // 管理者機能 - ログダウンロード
+        function downloadLogs() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            const dataStr = JSON.stringify(logs, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lab_diagnosis_logs_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            alert(`ログ${logs.length}件をダウンロードしました`);
+        }
+
+        // 管理者機能 - ログ消去
+        function clearLogs() {
+            if (confirm('すべての診断ログを消去しますか？')) {
+                localStorage.removeItem('lab_diagnosis_logs');
+                alert('ログを消去しました');
+            }
+        }
+
+        // ページ読み込み時に研究室選択肢を設定
+        document.addEventListener('DOMContentLoaded', populateLabOptions);
+    </script>
+</body>
+</html>
