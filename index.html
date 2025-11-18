@@ -89,6 +89,8 @@
             font-size: 12px;
             display: none;
         }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
     </style>
 </head>
 <body>
@@ -136,7 +138,7 @@
     </div>
 
     <script>
-        // テスト用のURL
+        // ✅ あなたのGoogle Apps Script URL
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyV8lwYiuGjEHugv1deMBFE9tXQQ180ILLLesufWtWixRP5HSpKC11xThnTiHdsYC_s/exec';
         
         // 研究室データ
@@ -144,15 +146,15 @@
             { name: "水族生理学研究室（品川)", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族生理学研究室（館山)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族生理学研究室（大泉)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "水族病理学研究室", capacity: 8, applicants: 13, gpa100: 3.5, gpa75: 3.0, gpa50: 3.0, gpa25: 2.5 },
+            { name: "水族病理学研究室", capacity: 8, applicants: 13, gpa100: 3.0, gpa75: 3.5, gpa50: 3.5, gpa25: 3.5 },
             { name: "水族栄養学研究室", capacity: 6, applicants: 6, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族養殖学研究室", capacity: 8, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "応用藻類学研究室", capacity: 6, applicants: 9, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 2.5 },
-            { name: "集団生物学研究室", capacity: 7, applicants: 10, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 2.5 },
-            { name: "増殖生態学研究室", capacity: 5, applicants: 6, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 3.0 },
+            { name: "応用藻類学研究室", capacity: 6, applicants: 9, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "集団生物学研究室", capacity: 7, applicants: 10, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "増殖生態学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
             { name: "資源解析学研究室", capacity: 6, applicants: 4, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "魚群制御学研究室", capacity: 5, applicants: 2, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "生産システム学研究室", capacity: 5, applicants: 6, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 3.0 },
+            { name: "生産システム学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
             { name: "ゲノム科学研究室", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "先端魚類防疫学研究室", capacity: 4, applicants: 0, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "応用微生物研究室", capacity: 5, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 }
@@ -173,9 +175,10 @@
         }
 
         // デバッグ情報を表示
-        function showDebugInfo(message) {
+        function showDebugInfo(message, type = 'info') {
             document.getElementById('debug').style.display = 'block';
-            document.getElementById('debugInfo').innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            const colorClass = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            document.getElementById('debugInfo').innerHTML += `<div class="${colorClass}">${new Date().toLocaleTimeString()}: ${message}</div>`;
         }
 
         // 合格確率を計算
@@ -226,7 +229,7 @@
             await sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results);
         }
 
-        // データをサーバーに送信
+        // データをサーバーに送信（no-corsモード）
         async function sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results) {
             const data = {
                 timestamp: new Date().toISOString(),
@@ -243,29 +246,28 @@
 
             try {
                 document.getElementById('loading').style.display = 'block';
-                showDebugInfo('送信開始...');
+                showDebugInfo('Google Apps Scriptに送信開始...');
 
-                // まずローカルストレージに保存（確実に記録するため）
+                // まずローカルストレージに保存
                 saveToLocalStorage(data);
-                showDebugInfo('ローカルストレージに保存');
+                showDebugInfo('ローカルストレージに保存完了');
 
-                // Google Apps Scriptに送信
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                // ✅ no-corsモードで送信
+                await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'no-cors', // CORSエラー回避
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                showDebugInfo('送信完了');
-                showDebugInfo('✅ データ送信成功');
+                showDebugInfo('✅ データ送信リクエスト完了', 'success');
+                showDebugInfo('📊 スプレッドシートを確認してください...', 'success');
                 
             } catch (error) {
                 console.error('データ送信エラー:', error);
-                showDebugInfo(`❌ 送信エラー: ${error.message}`);
-                showDebugInfo('⚠️ 送信失敗しましたが、ローカルには保存されています');
+                showDebugInfo(`❌ 送信エラー: ${error.message}`, 'error');
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
@@ -321,20 +323,8 @@
             }
         }
 
-        // ローカルストレージのデータを確認する関数
-        function checkLocalStorage() {
-            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
-            console.log('ローカルストレージのデータ:', logs);
-            showDebugInfo(`ローカルストレージに ${logs.length} 件のデータがあります`);
-            return logs;
-        }
-
         // ページ読み込み時に研究室選択肢を設定
-        document.addEventListener('DOMContentLoaded', function() {
-            populateLabOptions();
-            // ローカルストレージをチェック
-            setTimeout(checkLocalStorage, 1000);
-        });
+        document.addEventListener('DOMContentLoaded', populateLabOptions);
     </script>
 </body>
 </html>
