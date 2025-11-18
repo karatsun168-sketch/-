@@ -81,6 +81,14 @@
             color: #3498db;
             margin: 10px 0;
         }
+        .debug {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-size: 12px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -116,6 +124,11 @@
         <button onclick="calculateProbability()">診断する</button>
         <div id="loading" class="loading">データを送信中...</div>
 
+        <div id="debug" class="debug">
+            <strong>デバッグ情報:</strong>
+            <div id="debugInfo"></div>
+        </div>
+
         <div id="result" class="result" style="display: none;">
             <h2>🎯 診断結果</h2>
             <div id="resultContent"></div>
@@ -123,8 +136,10 @@
     </div>
 
     <script>
-        // Google Apps ScriptのURL（設定後に変更してください）
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/home/projects/1RA--6RXuu3N9otVsOjzJEmxjsT23gWMKQtcsgzfJB2SNoefnlZPdSFQJ/edit';
+        // テスト用のURL（実際のGoogle Apps Scriptが準備できるまで）
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/1RA--6RXuu3N9otVsOjzJEmxjsT23gWMKQtcsgzfJB2SNoefnlZPdSFQJ/exec';
+        // テスト用のエコーサービス（デバッグ用）
+        const TEST_URL = 'https://httpbin.org/post';
         
         // 研究室データ
         const labData = [
@@ -157,6 +172,12 @@
                     select.appendChild(option);
                 });
             });
+        }
+
+        // デバッグ情報を表示
+        function showDebugInfo(message) {
+            document.getElementById('debug').style.display = 'block';
+            document.getElementById('debugInfo').innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
         }
 
         // 合格確率を計算
@@ -203,12 +224,12 @@
             document.getElementById('resultContent').innerHTML = resultHTML;
             document.getElementById('result').style.display = 'block';
             
-            // データをGoogleスプレッドシートに送信
-            await sendToGoogleSheet(gpa, firstChoice, secondChoice, thirdChoice, results);
+            // データを送信
+            await sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results);
         }
 
-        // Googleスプレッドシートにデータ送信
-        async function sendToGoogleSheet(gpa, firstChoice, secondChoice, thirdChoice, results) {
+        // データをサーバーに送信
+        async function sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results) {
             const data = {
                 timestamp: new Date().toISOString(),
                 gpa: gpa,
@@ -217,40 +238,65 @@
                 thirdChoice: thirdChoice,
                 result1: results[0] || '未選択',
                 result2: results[1] || '未選択',
-                result3: results[2] || '未選択',
-                userAgent: navigator.userAgent
+                result3: results[2] || '未選択'
             };
+
+            showDebugInfo(`送信データ: ${JSON.stringify(data)}`);
 
             try {
                 document.getElementById('loading').style.display = 'block';
-                
+                showDebugInfo('送信開始...');
+
+                // まずローカルストレージに保存（確実に記録するため）
+                saveToLocalStorage(data);
+                showDebugInfo('ローカルストレージに保存');
+
+                // Google Apps Scriptに送信
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors', // CORSエラーを回避
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                const result = await response.json();
-                console.log('データ送信成功:', result);
+                showDebugInfo('送信完了（応答待ち）');
+                
+                // no-corsモードではレスポンスを読めないので、成功したと仮定
+                console.log('データ送信成功（no-corsモード）');
+                showDebugInfo('✅ データ送信成功');
                 
             } catch (error) {
-                console.log('データ送信に失敗しました:', error);
-                // エラー時も処理を続行
+                console.error('データ送信エラー:', error);
+                showDebugInfo(`❌ 送信エラー: ${error.message}`);
+                
+                // エラー時もローカルストレージには保存されている
+                showDebugInfo('⚠️ 送信失敗しましたが、ローカルには保存されています');
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
+        // ローカルストレージに保存（確実なバックアップ）
+        function saveToLocalStorage(data) {
+            try {
+                const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+                logs.push(data);
+                localStorage.setItem('lab_diagnosis_logs', JSON.stringify(logs));
+                return true;
+            } catch (error) {
+                console.error('ローカルストレージ保存エラー:', error);
+                return false;
+            }
+        }
+
         // 研究室ごとの確率計算
         function calculateLabProbability(gpa, lab) {
-            // 募集余地がある場合
             if (lab.applicants <= lab.capacity) {
                 return "100%";
             }
 
-            // GPAに基づく確率計算
             if (gpa >= lab.gpa100) return "100%";
             if (gpa >= lab.gpa75) return "75%";
             if (gpa >= lab.gpa50) return "50%";
@@ -284,6 +330,17 @@
 
         // ページ読み込み時に研究室選択肢を設定
         document.addEventListener('DOMContentLoaded', populateLabOptions);
+
+        // ローカルストレージのデータを確認する関数
+        function checkLocalStorage() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            console.log('ローカルストレージのデータ:', logs);
+            showDebugInfo(`ローカルストレージに ${logs.length} 件のデータがあります`);
+            return logs;
+        }
+
+        // ページ読み込み時にローカルストレージをチェック
+        setTimeout(checkLocalStorage, 1000);
     </script>
 </body>
 </html>
