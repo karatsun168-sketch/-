@@ -91,6 +91,26 @@
         }
         .success { color: #27ae60; }
         .error { color: #e74c3c; }
+        .admin-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #34495e;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .admin-btn {
+            background-color: #95a5a6;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .admin-btn:hover {
+            background-color: #7f8c8d;
+        }
     </style>
 </head>
 <body>
@@ -135,10 +155,18 @@
             <h2>🎯 診断結果</h2>
             <div id="resultContent"></div>
         </div>
+
+        <!-- 管理者用パネル -->
+        <div class="admin-panel">
+            <strong style="color: white;">管理者用</strong>
+            <button class="admin-btn" onclick="exportLocalData()">データエクスポート</button>
+            <button class="admin-btn" onclick="showDataStats()">統計表示</button>
+            <button class="admin-btn" onclick="clearLocalData()">データ消去</button>
+        </div>
     </div>
 
     <script>
-        // ✅ あなたのGoogle Apps Script URL
+        // Google Apps ScriptのURL
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyV8lwYiuGjEHugv1deMBFE9tXQQ180ILLLesufWtWixRP5HSpKC11xThnTiHdsYC_s/exec';
         
         // 研究室データ
@@ -165,6 +193,10 @@
             const selects = ['firstChoice', 'secondChoice', 'thirdChoice'];
             selects.forEach(selectId => {
                 const select = document.getElementById(selectId);
+                // 既存のオプションをクリア（「選択してください」以外）
+                while (select.children.length > 1) {
+                    select.removeChild(select.lastChild);
+                }
                 labData.forEach(lab => {
                     const option = document.createElement('option');
                     option.value = lab.name;
@@ -229,7 +261,7 @@
             await sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results);
         }
 
-        // データをサーバーに送信（no-corsモード）
+        // データをサーバーに送信
         async function sendDataToServer(gpa, firstChoice, secondChoice, thirdChoice, results) {
             const data = {
                 timestamp: new Date().toISOString(),
@@ -248,26 +280,31 @@
                 document.getElementById('loading').style.display = 'block';
                 showDebugInfo('Google Apps Scriptに送信開始...');
 
-                // まずローカルストレージに保存
+                // ローカルストレージにバックアップ保存
                 saveToLocalStorage(data);
-                showDebugInfo('ローカルストレージに保存完了');
+                showDebugInfo('ローカルストレージにバックアップ保存');
 
-                // ✅ no-corsモードで送信
-                await fetch(GOOGLE_SCRIPT_URL, {
+                // GitHub Pagesからは通常のfetchが使える
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // CORSエラー回避
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
-                
-                showDebugInfo('✅ データ送信リクエスト完了', 'success');
-                showDebugInfo('📊 スプレッドシートを確認してください...', 'success');
+
+                if (!response.ok) {
+                    throw new Error(`HTTPエラー: ${response.status}`);
+                }
+
+                const result = await response.json();
+                showDebugInfo(`✅ 送信成功: ${result.message}`, 'success');
+                showDebugInfo(`サーバー応答: ${JSON.stringify(result)}`, 'success');
                 
             } catch (error) {
-                console.error('データ送信エラー:', error);
+                console.error('送信エラー:', error);
                 showDebugInfo(`❌ 送信エラー: ${error.message}`, 'error');
+                showDebugInfo('⚠️ 送信に失敗しましたが、ローカルには保存されています', 'error');
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
@@ -323,8 +360,84 @@
             }
         }
 
+        // 管理者機能 - データエクスポート
+        function exportLocalData() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            
+            if (logs.length === 0) {
+                alert('ローカルに保存されたデータがありません');
+                return;
+            }
+            
+            // CSV形式でエクスポート
+            let csv = 'タイムスタンプ,GPA,第1希望,第2希望,第3希望,結果1,結果2,結果3\n';
+            
+            logs.forEach(log => {
+                csv += `"${log.timestamp}",${log.gpa},"${log.firstChoice}","${log.secondChoice}","${log.thirdChoice}","${log.result1}","${log.result2}","${log.result3}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `研究室診断データ_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            alert(`${logs.length}件のデータをCSVファイルでエクスポートしました`);
+        }
+
+        // 管理者機能 - データ統計表示
+        function showDataStats() {
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            
+            if (logs.length === 0) {
+                alert('データがありません');
+                return;
+            }
+            
+            console.group('📊 収集データ統計');
+            console.log(`総データ数: ${logs.length}件`);
+            console.log('最新5件のデータ:', logs.slice(-5));
+            
+            // 人気研究室ランキング
+            const labCount = {};
+            logs.forEach(log => {
+                if (log.firstChoice) labCount[log.firstChoice] = (labCount[log.firstChoice] || 0) + 1;
+                if (log.secondChoice) labCount[log.secondChoice] = (labCount[log.secondChoice] || 0) + 1;
+                if (log.thirdChoice) labCount[log.thirdChoice] = (labCount[log.thirdChoice] || 0) + 1;
+            });
+            
+            const sortedLabs = Object.entries(labCount)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            console.log('人気研究室TOP5:');
+            sortedLabs.forEach(([lab, count], index) => {
+                console.log(`  ${index + 1}. ${lab}: ${count}回`);
+            });
+            
+            console.groupEnd();
+            alert(`${logs.length}件のデータ統計をコンソールに表示しました（F12で確認）`);
+        }
+
+        // 管理者機能 - データ消去
+        function clearLocalData() {
+            if (confirm('ローカルストレージのすべてのデータを消去しますか？')) {
+                localStorage.removeItem('lab_diagnosis_logs');
+                alert('データを消去しました');
+            }
+        }
+
         // ページ読み込み時に研究室選択肢を設定
-        document.addEventListener('DOMContentLoaded', populateLabOptions);
+        document.addEventListener('DOMContentLoaded', function() {
+            populateLabOptions();
+            // ローカルストレージのデータ数を表示
+            const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
+            if (logs.length > 0) {
+                showDebugInfo(`ローカルストレージに ${logs.length} 件のデータがあります`);
+            }
+        });
     </script>
 </body>
 </html>
