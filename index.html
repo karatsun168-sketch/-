@@ -137,22 +137,22 @@
 
     <script>
         // テスト用のURL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/1ajDHQoyVdNeJf5LjDA7AigwOKi_0EjeCWiaa6ZLnExgUsBL-BpLWbiQO/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyV8lwYiuGjEHugv1deMBFE9tXQQ180ILLLesufWtWixRP5HSpKC11xThnTiHdsYC_s/exec';
         
         // 研究室データ
         const labData = [
             { name: "水族生理学研究室（品川)", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族生理学研究室（館山)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族生理学研究室（大泉)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "水族病理学研究室", capacity: 8, applicants: 13, gpa100: 3.0, gpa75: 3.5, gpa50: 3.5, gpa25: 3.5 },
+            { name: "水族病理学研究室", capacity: 8, applicants: 13, gpa100: 3.5, gpa75: 3.0, gpa50: 3.0, gpa25: 2.5 },
             { name: "水族栄養学研究室", capacity: 6, applicants: 6, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族養殖学研究室", capacity: 8, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "応用藻類学研究室", capacity: 6, applicants: 9, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
-            { name: "集団生物学研究室", capacity: 7, applicants: 10, gpa100: 3.0, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
-            { name: "増殖生態学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "応用藻類学研究室", capacity: 6, applicants: 9, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 2.5 },
+            { name: "集団生物学研究室", capacity: 7, applicants: 10, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 2.5 },
+            { name: "増殖生態学研究室", capacity: 5, applicants: 6, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 3.0 },
             { name: "資源解析学研究室", capacity: 6, applicants: 4, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "魚群制御学研究室", capacity: 5, applicants: 2, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
-            { name: "生産システム学研究室", capacity: 5, applicants: 6, gpa100: 2.5, gpa75: 3.0, gpa50: 3.5, gpa25: 3.5 },
+            { name: "生産システム学研究室", capacity: 5, applicants: 6, gpa100: 3.5, gpa75: 3.5, gpa50: 3.0, gpa25: 3.0 },
             { name: "ゲノム科学研究室", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "先端魚類防疫学研究室", capacity: 4, applicants: 0, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "応用微生物研究室", capacity: 5, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 }
