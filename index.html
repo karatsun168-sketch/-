@@ -79,15 +79,24 @@
             position: fixed;
             top: 10px;
             right: 10px;
-            opacity: 0.1;
-            transition: opacity 0.3s;
             background: white;
             padding: 10px;
             border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
             z-index: 1000;
+            display: none;
         }
-        .admin-panel:hover {
+        .admin-login {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+            background: #34495e;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .admin-login:hover {
             opacity: 1;
         }
         .admin-btn {
@@ -95,6 +104,21 @@
             font-size: 12px;
             padding: 5px 10px;
             margin: 2px;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .admin-btn:hover {
+            background-color: #7f8c8d;
+        }
+        .password-input {
+            margin: 10px 0;
+            padding: 5px;
+            width: 150px;
+        }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
@@ -136,16 +160,31 @@
         </div>
     </div>
 
-    <!-- 管理者パネル（通常は半透明で表示） -->
-    <div class="admin-panel">
-        <strong>管理者用</strong>
-        <button class="admin-btn" onclick="showAllLogs()">全ログ表示</button>
-        <button class="admin-btn" onclick="showStats()">統計表示</button>
-        <button class="admin-btn" onclick="downloadLogs()">ログダウンロード</button>
-        <button class="admin-btn" onclick="clearLogs()">ログ消去</button>
+    <!-- 管理者ログインボタン -->
+    <div class="admin-login">
+        <button class="admin-btn" onclick="showAdminLogin()">管理者</button>
+    </div>
+
+    <!-- 管理者パネル（パスワード認証後表示） -->
+    <div id="adminPanel" class="admin-panel">
+        <strong>管理者パネル</strong>
+        <div id="adminLogin">
+            <input type="password" id="adminPassword" class="password-input" placeholder="パスワード">
+            <button class="admin-btn" onclick="login()">ログイン</button>
+        </div>
+        <div id="adminControls" class="hidden">
+            <button class="admin-btn" onclick="showAllLogs()">全ログ表示</button>
+            <button class="admin-btn" onclick="showStats()">統計表示</button>
+            <button class="admin-btn" onclick="downloadLogs()">ログダウンロード</button>
+            <button class="admin-btn" onclick="clearLogs()">ログ消去</button>
+            <button class="admin-btn" onclick="logout()">ログアウト</button>
+        </div>
     </div>
 
     <script>
+        // 管理者パスワード（実際の使用時には変更してください）
+        const ADMIN_PASSWORD = "admin123";
+        
         // 研究室データ
         const labData = [
             { name: "水族生理学研究室（品川)", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
@@ -164,6 +203,28 @@
             { name: "先端魚類防疫学研究室", capacity: 4, applicants: 0, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "応用微生物研究室", capacity: 5, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 }
         ];
+
+        // 管理者機能
+        function showAdminLogin() {
+            document.getElementById('adminPanel').style.display = 'block';
+        }
+
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('adminLogin').classList.add('hidden');
+                document.getElementById('adminControls').classList.remove('hidden');
+                document.getElementById('adminPassword').value = '';
+            } else {
+                alert('パスワードが違います');
+            }
+        }
+
+        function logout() {
+            document.getElementById('adminLogin').classList.remove('hidden');
+            document.getElementById('adminControls').classList.add('hidden');
+            document.getElementById('adminPanel').style.display = 'none';
+        }
 
         // 研究室選択肢を追加
         function populateLabOptions() {
@@ -223,7 +284,7 @@
             document.getElementById('resultContent').innerHTML = resultHTML;
             document.getElementById('result').style.display = 'block';
             
-            // 使用データを自動記録
+            // 使用データを自動記録（コンソールには表示しない）
             logUsageData(gpa, firstChoice, secondChoice, thirdChoice, results);
         }
 
@@ -266,7 +327,7 @@
             }
         }
 
-        // データ記録機能
+        // データ記録機能（コンソールには表示しない）
         function logUsageData(gpa, firstChoice, secondChoice, thirdChoice, results) {
             const logData = {
                 timestamp: new Date().toLocaleString('ja-JP'),
@@ -279,12 +340,7 @@
                 result3: results[2] || '未選択'
             };
 
-            // コンソールに表示（管理者確認用）
-            console.group('🔍 研究室診断利用データ');
-            console.table(logData);
-            console.groupEnd();
-
-            // ローカルストレージに保存
+            // ローカルストレージに保存（コンソールには表示しない）
             saveToLocalStorage(logData);
         }
 
@@ -292,7 +348,7 @@
         function saveToLocalStorage(data) {
             const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
             logs.push(data);
-            if (logs.length > 1000) logs.shift(); // 最大1000件
+            if (logs.length > 1000) logs.shift();
             localStorage.setItem('lab_diagnosis_logs', JSON.stringify(logs));
         }
 
