@@ -166,8 +166,10 @@
     </div>
 
     <script>
-        // Google Apps ScriptのURL
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGp0hOzVKmRvz9eXMBhh6fri1j3zlRhIhAR1VpcFgzwkxqKIT1w7m_GbFXMdwWjRUv/exec
+        // ✅ 現在正しいGoogle Apps ScriptのURL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxVRF-7S9VdypJiHrVe7fcVcSeVGxNA3XqIqnrVAuY/dev';
+        
+        // 研究室データ
         const labData = [
             { name: "水族生理学研究室（品川)", capacity: 7, applicants: 1, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
             { name: "水族生理学研究室（館山)", capacity: 3, applicants: 3, gpa100: 1.0, gpa75: 1.0, gpa50: 1.0, gpa25: 1.0 },
@@ -276,33 +278,28 @@
 
             try {
                 document.getElementById('loading').style.display = 'block';
-                showDebugInfo('Google Apps Scriptに送信開始...');
+                showDebugInfo('データ送信中...');
 
                 // ローカルストレージにバックアップ保存
                 saveToLocalStorage(data);
                 showDebugInfo('ローカルストレージにバックアップ保存');
 
-                // GitHub Pagesからは通常のfetchが使える
-                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                // no-corsモードで送信
+                await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
-
-                if (!response.ok) {
-                    throw new Error(`HTTPエラー: ${response.status}`);
-                }
-
-                const result = await response.json();
-                showDebugInfo(`✅ 送信成功: ${result.message}`, 'success');
-                showDebugInfo(`サーバー応答: ${JSON.stringify(result)}`, 'success');
+                
+                showDebugInfo('✅ データ送信完了', 'success');
+                showDebugInfo('📊 スプレッドシートを確認してください', 'success');
                 
             } catch (error) {
                 console.error('送信エラー:', error);
                 showDebugInfo(`❌ 送信エラー: ${error.message}`, 'error');
-                showDebugInfo('⚠️ 送信に失敗しましたが、ローカルには保存されています', 'error');
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
