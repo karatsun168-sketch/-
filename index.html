@@ -136,10 +136,8 @@
     </div>
 
     <script>
-        // テスト用のURL（実際のGoogle Apps Scriptが準備できるまで）
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/1RA--6RXuu3N9otVsOjzJEmxjsT23gWMKQtcsgzfJB2SNoefnlZPdSFQJ/exec';
-        // テスト用のエコーサービス（デバッグ用）
-        const TEST_URL = 'https://httpbin.org/post';
+        // テスト用のURL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/1ajDHQoyVdNeJf5LjDA7AigwOKi_0EjeCWiaa6ZLnExgUsBL-BpLWbiQO/exec';
         
         // 研究室データ
         const labData = [
@@ -254,31 +252,26 @@
                 // Google Apps Scriptに送信
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // CORSエラーを回避
+                    mode: 'no-cors',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                showDebugInfo('送信完了（応答待ち）');
-                
-                // no-corsモードではレスポンスを読めないので、成功したと仮定
-                console.log('データ送信成功（no-corsモード）');
+                showDebugInfo('送信完了');
                 showDebugInfo('✅ データ送信成功');
                 
             } catch (error) {
                 console.error('データ送信エラー:', error);
                 showDebugInfo(`❌ 送信エラー: ${error.message}`);
-                
-                // エラー時もローカルストレージには保存されている
                 showDebugInfo('⚠️ 送信失敗しましたが、ローカルには保存されています');
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
-        // ローカルストレージに保存（確実なバックアップ）
+        // ローカルストレージに保存
         function saveToLocalStorage(data) {
             try {
                 const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
@@ -328,9 +321,6 @@
             }
         }
 
-        // ページ読み込み時に研究室選択肢を設定
-        document.addEventListener('DOMContentLoaded', populateLabOptions);
-
         // ローカルストレージのデータを確認する関数
         function checkLocalStorage() {
             const logs = JSON.parse(localStorage.getItem('lab_diagnosis_logs') || '[]');
@@ -339,8 +329,12 @@
             return logs;
         }
 
-        // ページ読み込み時にローカルストレージをチェック
-        setTimeout(checkLocalStorage, 1000);
+        // ページ読み込み時に研究室選択肢を設定
+        document.addEventListener('DOMContentLoaded', function() {
+            populateLabOptions();
+            // ローカルストレージをチェック
+            setTimeout(checkLocalStorage, 1000);
+        });
     </script>
 </body>
 </html>
